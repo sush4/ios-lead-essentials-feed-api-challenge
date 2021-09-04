@@ -24,8 +24,8 @@ public final class RemoteFeedLoader: FeedLoader {
 			case .success((let data, let response)):
 				if response.statusCode == 200 {
 					let decoder = JSONDecoder()
-					if let _ = try? decoder.decode(FeedImageParser.self, from: data) {
-//						com
+					if let feedImages = try? decoder.decode(FeedImageParser.self, from: data).feedImages {
+						completion(.success(feedImages))
 					} else {
 						completion(.failure(.invalidData))
 					}
