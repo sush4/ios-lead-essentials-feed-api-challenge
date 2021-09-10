@@ -7,7 +7,7 @@ import Foundation
 public final class RemoteFeedLoader: FeedLoader {
 	private let url: URL
 	private let client: HTTPClient
-	private var ok_200: Int { return 200 }
+	private static let ok_200 = 200
 
 	public enum Error: Swift.Error {
 		case connectivity
@@ -21,22 +21,26 @@ public final class RemoteFeedLoader: FeedLoader {
 
 	public func load(completion: @escaping (FeedLoader.Result) -> Void) {
 		client.get(from: url) { [weak self] result in
-			guard let this = self else { return }
+			guard self != nil else { return }
 			switch result {
 			case .success((let data, let response)):
-				if response.statusCode == this.ok_200, let feedImages = try? JSONDecoder().decode(FeedImageParser.self, from: data).feedImages {
-					completion(.success(feedImages))
-				} else {
-					completion(.failure(RemoteFeedLoader.Error.invalidData))
-				}
+				RemoteFeedLoader.mapSuccessResponse(data: data, response: response, completion: completion)
 			case .failure:
-				completion(.failure(RemoteFeedLoader.Error.connectivity))
+				completion(.failure(Error.connectivity))
 			}
+		}
+	}
+
+	private static func mapSuccessResponse(data: Data, response: HTTPURLResponse, completion: @escaping (FeedLoader.Result) -> Void) {
+		if response.statusCode == RemoteFeedLoader.ok_200, let feedImages = try? JSONDecoder().decode(FeedImageAPIResponse.self, from: data).feedImages {
+			completion(.success(feedImages))
+		} else {
+			completion(.failure(Error.invalidData))
 		}
 	}
 }
 
-private struct FeedImageParser: Decodable {
+private struct FeedImageAPIResponse: Decodable {
 	private struct FeedImageResponse: Decodable {
 		let image_id: UUID
 		let image_desc: String?
